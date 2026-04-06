@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<title>Regnespil</title>
+<style>
+ body {
+  font-family: monospace;
+  background: #111;
+  color: #0f0;
+  text-align: center;
+  margin-top: 50px;
+ }
+ .big { font-size: 40px; }
+ .mid { font-size: 24px; }
+</style>
+</head>
+<body>
+
+<div id="game"></div>
+
+<script>
+let score = 0;
+let mål = 20;
+
+let a, b, op, svar;
+
+let input = "";
+let feedback = "";
+
+let tidPrSpg = 10;
+let tidTilbage = 10;
+
+let startTid = Date.now();
+let slutTid = 0;
+
+let state = "spiller";
+
+function nytSpørgsmål() {
+ do {
+  a = Math.floor(Math.random() * 9) + 1;
+  b = Math.floor(Math.random() * 9) + 1;
+
+  if (Math.random() < 0.5) {
+   op = "+";
+   svar = a + b;
+  } else {
+   op = "-";
+   if (a < b) [a, b] = [b, a];
+   svar = a - b;
+  }
+ } while (svar < 0 || svar > 9);
+
+ input = "";
+ tidTilbage = tidPrSpg;
+}
+
+function reset() {
+ score = 0;
+ state = "spiller";
+ startTid = Date.now();
+ nytSpørgsmål();
+}
+
+function opdater() {
+ if (state === "spiller") {
+  tidTilbage -= 0.016;
+
+  if (tidTilbage <= 0) {
+   feedback = "For langsom!";
+   nytSpørgsmål();
+  }
+ }
+ tegn();
+ requestAnimationFrame(opdater);
+}
+
+function tegn() {
+ const game = document.getElementById("game");
+
+ if (state === "vundet") {
+  game.innerHTML = `
+   <div class="big">Du vandt! 🎉</div>
+   <div class="mid">Tid: ${Math.floor(slutTid/1000)} sek</div>
+   <div>Tryk R for at spille igen</div>
+  `;
+  return;
+ }
+
+ let samletTid = Math.floor((Date.now() - startTid) / 1000);
+
+ game.innerHTML = `
+  <div>Point: ${score}/${mål}</div>
+  <div>Tid: ${samletTid}s</div>
+  <div>⏱️ ${Math.ceil(tidTilbage)}</div>
+  <div class="big">${a} ${op} ${b} = ?</div>
+  <div class="mid">Svar: ${input || "_"}</div>
+  <div>${feedback}</div>
+  <div>Enter = svar | Backspace = slet | R = restart</div>
+ `;
+}
+
+document.addEventListener("keydown", (e) => {
+ if (state === "vundet") {
+  if (e.key.toLowerCase() === "r") reset();
+  return;
+ }
+
+ if (e.key >= "0" && e.key <= "9") {
+  input = e.key; // kun ét ciffer
+ }
+
+ if (e.key === "Backspace") {
+  input = "";
+ }
+
+ if (e.key === "Enter") {
+  if (input !== "") {
+   if (parseInt(input) === svar) {
+    score++;
+    feedback = "Rigtigt!";
+   } else {
+    feedback = "Forkert! Svar: " + svar;
+   }
+
+   if (score >= mål) {
+    state = "vundet";
+    slutTid = Date.now() - startTid;
+   } else {
+    nytSpørgsmål();
+   }
+  }
+ }
+
+ if (e.key.toLowerCase() === "r") {
+  reset();
+ }
+});
+
+reset();
+opdater();
+</script>
+
+</body>
+</html>
